@@ -1,0 +1,138 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>API-2-MCP — Project Summary</title>
+<style>
+  body { background: #fff; color: #1f2328; font-family: -apple-system,"Segoe UI",system-ui,sans-serif; font-size:14px; line-height:1.6; margin:0; padding:0; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem; }
+  h1 { font-size: 1.6rem; font-weight: 700; color: #1f2328; margin-bottom: .25rem; }
+  .subtitle { color: #57606a; font-size: .9rem; margin-bottom: 2rem; }
+  .arch { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.5rem; margin-bottom: 2rem; font-family: monospace; font-size: .82rem; text-align: center; line-height: 2.2; }
+  .arch .box { display: inline-block; padding: .3rem 1rem; border-radius: 6px; font-weight: 600; }
+  .box-blue { background: #dbeafe; color: #1e40af; }
+  .box-green { background: #dcfce7; color: #166534; }
+  .box-purple { background: #ede9fe; color: #5b21b6; }
+  .box-orange { background: #ffedd5; color: #9a3412; }
+  .arrow { color: #57606a; font-size: .85rem; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: #1f2328; margin: 2rem 0 .75rem; border-bottom: 1px solid #e5e7eb; padding-bottom: .4rem; }
+  .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+  .app-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem 1.2rem; background: #f7f8fa; }
+  .app-card .num { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #57606a; }
+  .app-card .name { font-size: .95rem; font-weight: 700; margin: .15rem 0; }
+  .app-card .port { font-family: monospace; font-size: .8rem; color: #3b82d4; font-weight: 600; }
+  .app-card .desc { font-size: .8rem; color: #57606a; margin-top: .4rem; }
+  .tech-tag { display: inline-block; background: #e9ecef; color: #495057; border-radius: 3px; padding: .1em .5em; font-size: .72rem; font-family: monospace; margin: .1rem .1rem 0 0; }
+  .url-row { display: flex; align-items: center; gap: .75rem; padding: .45rem 0; border-bottom: 1px solid #f0f2f5; }
+  .url-row:last-child { border-bottom: none; }
+  .url-label { width: 220px; font-size: .82rem; color: #57606a; flex-shrink: 0; }
+  .url-link { font-family: monospace; font-size: .8rem; color: #3b82d4; }
+  .badge { display: inline-block; padding: .15em .5em; border-radius: 3px; font-size: .7rem; font-weight: 600; }
+  .badge-ok { background: #dcfce7; color: #166534; }
+  .badge-tech { background: #ede9fe; color: #5b21b6; }
+  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; margin-top: .5rem; }
+  .tool-row { font-family: monospace; font-size: .78rem; color: #1f2328; background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 4px; padding: .25rem .6rem; }
+  .tool-arrow { color: #57606a; font-size: .7rem; margin-left: .4rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { background: #f7f8fa; text-align: left; padding: .5rem .75rem; border: 1px solid #e5e7eb; font-weight: 600; color: #57606a; }
+  td { padding: .5rem .75rem; border: 1px solid #e5e7eb; }
+  code { background: #f6f8fa; color: #c7254e; font-size: .78rem; padding: .1em .4em; border-radius: 3px; font-family: monospace; }
+  .flow { background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 1rem 1.5rem; font-size: .82rem; }
+  .flow-step { display: flex; align-items: flex-start; gap: .75rem; padding: .5rem 0; }
+  .flow-step .num-circle { width: 22px; height: 22px; border-radius: 50%; background: #3b82d4; color: #fff; display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; flex-shrink: 0; margin-top: .05rem; }
+  .flow-step .content strong { color: #1f2328; }
+  .footer { text-align: center; border-top: 1px solid #e5e7eb; margin-top: 3rem; padding-top: 1rem; color: #57606a; font-size: .75rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔗 API-2-MCP</h1>
+  <div class="subtitle">Four-application demo: REST API → API Client → MCP Server → AI Agent — all running with interactive GUIs</div>
+
+  <div class="arch">
+    <div><span class="box box-orange">🤖 App 4: Mock AI Agent</span> <span class="box box-orange">:8004 — Chat GUI</span></div>
+    <div class="arrow">⬇ MCP Protocol (JSON-RPC)</div>
+    <div><span class="box box-purple">⚙️ App 3: MCP Server</span> <span class="box box-purple">:8003 — 8 Tools</span></div>
+    <div class="arrow">⬇ HTTP REST Calls</div>
+    <div><span class="box box-blue">📚 App 1: Library API Server</span> <span class="box box-blue">:8001 — 10 Endpoints</span></div>
+    <div class="arrow">↑ also consumed by</div>
+    <div><span class="box box-green">🔗 App 2: API Client</span> <span class="box box-green">:8002 — Dashboard GUI</span></div>
+  </div>
+
+  <h2>Applications</h2>
+  <div class="app-grid">
+    <div class="app-card">
+      <div class="num">App 1</div>
+      <div class="name">📚 Library API Server</div>
+      <div class="port">http://localhost:8001</div>
+      <div class="desc">FastAPI REST server with CRUD operations, borrow/return, Swagger UI, and live dashboard with request logging.</div>
+      <div style="margin-top:.5rem"><span class="tech-tag">Python</span><span class="tech-tag">FastAPI</span><span class="tech-tag">Uvicorn</span><span class="tech-tag">Bootstrap</span></div>
+    </div>
+    <div class="app-card">
+      <div class="num">App 2</div>
+      <div class="name">🔗 API Client Dashboard</div>
+      <div class="port">http://localhost:8002</div>
+      <div class="desc">HTTP proxy client consuming App 1 APIs. Features table/card views, request timeline, genre chart, add/edit/delete flows.</div>
+      <div style="margin-top:.5rem"><span class="tech-tag">Python</span><span class="tech-tag">FastAPI</span><span class="tech-tag">httpx</span><span class="tech-tag">Chart.js</span></div>
+    </div>
+    <div class="app-card">
+      <div class="num">App 3</div>
+      <div class="name">⚙️ MCP Server</div>
+      <div class="port">http://localhost:8003</div>
+      <div class="desc">Node.js MCP server exposing 8 AI-callable tools wrapping App 1's REST endpoints. SSE + Streamable HTTP transports. Dark dashboard with live tool call log.</div>
+      <div style="margin-top:.5rem"><span class="tech-tag">Node.js</span><span class="tech-tag">TypeScript</span><span class="tech-tag">Express</span><span class="tech-tag">MCP SDK</span></div>
+    </div>
+    <div class="app-card">
+      <div class="num">App 4</div>
+      <div class="name">🤖 Mock AI Agent</div>
+      <div class="port">http://localhost:8004</div>
+      <div class="desc">Chat interface agent with WebSocket streaming. Discovers MCP tools, uses Ollama LLM (ReAct loop) or falls back to rule-based mock. Shows full reasoning chain.</div>
+      <div style="margin-top:.5rem"><span class="tech-tag">Python</span><span class="tech-tag">FastAPI</span><span class="tech-tag">WebSocket</span><span class="tech-tag">Ollama</span></div>
+    </div>
+  </div>
+
+  <h2>MCP Tools — API Transformation</h2>
+  <div class="tools-grid">
+    <div class="tool-row">list_books <span class="tool-arrow">← GET /books</span></div>
+    <div class="tool-row">get_book <span class="tool-arrow">← GET /books/{id}</span></div>
+    <div class="tool-row">create_book <span class="tool-arrow">← POST /books</span></div>
+    <div class="tool-row">update_book <span class="tool-arrow">← PUT /books/{id}</span></div>
+    <div class="tool-row">delete_book <span class="tool-arrow">← DELETE /books/{id}</span></div>
+    <div class="tool-row">borrow_book <span class="tool-arrow">← POST /borrow</span></div>
+    <div class="tool-row">return_book <span class="tool-arrow">← POST /return</span></div>
+    <div class="tool-row">list_genres <span class="tool-arrow">← GET /genres</span></div>
+  </div>
+
+  <h2>Quick Start</h2>
+  <div class="flow">
+    <div class="flow-step"><div class="num-circle">1</div><div class="content"><strong>Setup:</strong> <code>./scripts/setup.sh</code> — installs all Python venvs + Node.js deps + TypeScript compile</div></div>
+    <div class="flow-step"><div class="num-circle">2</div><div class="content"><strong>Ollama (optional):</strong> <code>ollama pull llama3.2</code> — enables LLM-powered agent mode</div></div>
+    <div class="flow-step"><div class="num-circle">3</div><div class="content"><strong>Start all:</strong> <code>./scripts/start-all.sh</code> — launches all 4 apps in the background</div></div>
+    <div class="flow-step"><div class="num-circle">4</div><div class="content"><strong>Explore:</strong> Open the 4 URLs and try: <em>"Show all Fantasy books"</em> in App 4's chat</div></div>
+    <div class="flow-step"><div class="num-circle">5</div><div class="content"><strong>Stop all:</strong> <code>./scripts/stop-all.sh</code></div></div>
+  </div>
+
+  <h2>Project Structure</h2>
+  <table>
+    <tr><th>Path</th><th>Description</th></tr>
+    <tr><td><code>app1-api-server/</code></td><td>FastAPI REST API — Books CRUD (10 endpoints, seeded with 8 books)</td></tr>
+    <tr><td><code>app2-api-client/</code></td><td>FastAPI proxy client with sidebar nav, card/table views, stats chart</td></tr>
+    <tr><td><code>app3-mcp-server/</code></td><td>Node.js TypeScript MCP server — SSE + Streamable HTTP + direct REST bridge</td></tr>
+    <tr><td><code>app4-mock-agent/</code></td><td>Python agent — WebSocket chat UI, ReAct loop, Ollama / mock fallback</td></tr>
+    <tr><td><code>scripts/</code></td><td><code>setup.sh</code>, <code>start-all.sh</code>, <code>stop-all.sh</code></td></tr>
+    <tr><td><code>Docs/Architecture.md</code></td><td>Mermaid architecture + sequence + transformation diagrams</td></tr>
+    <tr><td><code>Docs/Quickstart.md</code></td><td>Step-by-step setup guide with troubleshooting table</td></tr>
+    <tr><td><code>.env.example</code></td><td>All environment variables with defaults</td></tr>
+  </table>
+
+  <h2>Live URLs</h2>
+  <div class="url-row"><div class="url-label">📚 App 1 — Library API</div><div class="url-link">http://localhost:8001</div><div><span class="badge badge-ok">✓ Online</span></div></div>
+  <div class="url-row"><div class="url-label">📚 App 1 — Swagger UI</div><div class="url-link">http://localhost:8001/docs</div><div><span class="badge badge-ok">✓ Online</span></div></div>
+  <div class="url-row"><div class="url-label">🔗 App 2 — API Client</div><div class="url-link">http://localhost:8002</div><div><span class="badge badge-ok">✓ Online</span></div></div>
+  <div class="url-row"><div class="url-label">⚙️ App 3 — MCP Server</div><div class="url-link">http://localhost:8003</div><div><span class="badge badge-ok">✓ Online</span></div></div>
+  <div class="url-row"><div class="url-label">🤖 App 4 — AI Agent</div><div class="url-link">http://localhost:8004</div><div><span class="badge badge-ok">✓ Online</span></div></div>
+
+  <div class="footer">Made with IBM Bob · MIT License · API-2-MCP Project 2025</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Library API Server</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    :root { --accent: #0d6efd; --success: #198754; --warning: #ffc107; }
+    body { background: #f0f2f5; font-family: system-ui, sans-serif; }
+    .navbar-brand { font-weight: 700; letter-spacing: .5px; }
+    .stat-card { border: none; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .stat-card .card-body { padding: 1.5rem; }
+    .stat-value { font-size: 2.5rem; font-weight: 700; }
+    .badge-genre { font-size: .75rem; }
+    #book-table thead { background: #212529; color: #fff; }
+    .status-badge { font-size: .78rem; padding: .3em .7em; border-radius: 50px; }
+    .available { background: #d1e7dd; color: #0a3622; }
+    .borrowed { background: #f8d7da; color: #58151c; }
+    .action-row { gap: .4rem; }
+    .form-section { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .tag { display: inline-block; background: #e9ecef; color: #495057; border-radius: 20px; padding: .2em .75em; font-size: .8rem; margin: .1rem; }
+    pre.endpoint { background: #212529; color: #90cdf4; border-radius: 8px; padding: .75rem 1rem; font-size: .82rem; overflow-x: auto; }
+    .log-entry { font-size: .8rem; border-left: 3px solid #0d6efd; padding-left: .75rem; margin-bottom: .4rem; }
+    .log-entry.error { border-color: #dc3545; }
+    #request-log { max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark px-4 py-3">
+  <span class="navbar-brand">📚 Library API Server <small class="text-secondary fs-6 fw-normal">— App 1</small></span>
+  <div class="d-flex gap-2">
+    <a href="/docs" class="btn btn-sm btn-outline-light" target="_blank">Swagger UI</a>
+    <a href="/redoc" class="btn btn-sm btn-outline-secondary" target="_blank">ReDoc</a>
+    <span id="health-badge" class="badge bg-secondary ms-2 align-self-center">⏳ checking…</span>
+  </div>
+</nav>
+
+<div class="container-fluid px-4 py-4">
+
+  <!-- Stats Row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card stat-card">
+        <div class="card-body text-center">
+          <div class="stat-value text-primary" id="stat-total">—</div>
+          <div class="text-muted small">Total Books</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card">
+        <div class="card-body text-center">
+          <div class="stat-value text-success" id="stat-available">—</div>
+          <div class="text-muted small">Available</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card">
+        <div class="card-body text-center">
+          <div class="stat-value text-danger" id="stat-borrowed">—</div>
+          <div class="text-muted small">Borrowed</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card">
+        <div class="card-body text-center">
+          <div class="stat-value text-warning" id="stat-genres">—</div>
+          <div class="text-muted small">Genres</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left: Book Table -->
+    <div class="col-lg-8">
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+          <h6 class="mb-0 fw-semibold">📖 Book Catalogue</h6>
+          <div class="d-flex gap-2">
+            <input class="form-control form-control-sm" id="search-input" placeholder="Search…" style="width:160px">
+            <select class="form-select form-select-sm" id="filter-genre" style="width:150px">
+              <option value="">All Genres</option>
+            </select>
+            <select class="form-select form-select-sm" id="filter-avail" style="width:130px">
+              <option value="">All Status</option>
+              <option value="true">Available</option>
+              <option value="false">Borrowed</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" id="book-table">
+              <thead>
+                <tr>
+                  <th>Title</th><th>Author</th><th>Genre</th><th>Year</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="books-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Endpoints Reference -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3"><h6 class="mb-0 fw-semibold">🔌 Available API Endpoints</h6></div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-md-6"><pre class="endpoint">GET    /books
+GET    /books?genre=Fantasy
+GET    /books?available=true
+GET    /books?search=tolkien</pre></div>
+            <div class="col-md-6"><pre class="endpoint">POST   /books
+GET    /books/{id}
+PUT    /books/{id}
+DELETE /books/{id}</pre></div>
+            <div class="col-md-6"><pre class="endpoint">POST   /books/{id}/borrow
+POST   /books/{id}/return</pre></div>
+            <div class="col-md-6"><pre class="endpoint">GET    /genres
+GET    /health</pre></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Add Book Form + Log -->
+    <div class="col-lg-4">
+      <div class="form-section mb-4">
+        <h6 class="fw-semibold mb-3">➕ Add New Book</h6>
+        <form id="add-form">
+          <div class="mb-2">
+            <input class="form-control form-control-sm" id="f-title" placeholder="Title *" required>
+          </div>
+          <div class="mb-2">
+            <input class="form-control form-control-sm" id="f-author" placeholder="Author *" required>
+          </div>
+          <div class="mb-2 row g-1">
+            <div class="col-8"><input class="form-control form-control-sm" id="f-genre" placeholder="Genre *" required></div>
+            <div class="col-4"><input class="form-control form-control-sm" id="f-year" type="number" placeholder="Year" value="2024"></div>
+          </div>
+          <div class="mb-2">
+            <textarea class="form-control form-control-sm" id="f-desc" placeholder="Description (optional)" rows="2"></textarea>
+          </div>
+          <div class="mb-3 form-check">
+            <input class="form-check-input" type="checkbox" id="f-avail" checked>
+            <label class="form-check-label small" for="f-avail">Available for borrowing</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100">Add Book</button>
+        </form>
+      </div>
+
+      <!-- Request Log -->
+      <div class="form-section">
+        <div class="d-flex justify-content-between mb-2">
+          <h6 class="fw-semibold mb-0">📋 Request Log</h6>
+          <button class="btn btn-sm btn-outline-secondary" onclick="clearLog()">Clear</button>
+        </div>
+        <div id="request-log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-semibold">✏️ Edit Book</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="e-id">
+        <div class="mb-2"><input class="form-control form-control-sm" id="e-title" placeholder="Title"></div>
+        <div class="mb-2"><input class="form-control form-control-sm" id="e-author" placeholder="Author"></div>
+        <div class="mb-2 row g-1">
+          <div class="col-8"><input class="form-control form-control-sm" id="e-genre" placeholder="Genre"></div>
+          <div class="col-4"><input class="form-control form-control-sm" id="e-year" type="number" placeholder="Year"></div>
+        </div>
+        <div class="mb-2"><textarea class="form-control form-control-sm" id="e-desc" placeholder="Description" rows="2"></textarea></div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="e-avail">
+          <label class="form-check-label small" for="e-avail">Available</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = '';
+let allBooks = [];
+let editModal;
+
+async function apiFetch(path, opts = {}) {
+  const method = opts.method || 'GET';
+  const start = Date.now();
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts
+    });
+    const data = await res.json();
+    addLog(method, path, res.status, Date.now() - start);
+    if (!res.ok) throw new Error(data.detail || 'Request failed');
+    return data;
+  } catch(e) {
+    addLog(method, path, 'ERR', Date.now() - start, true);
+    throw e;
+  }
+}
+
+function addLog(method, path, status, ms, isErr = false) {
+  const log = document.getElementById('request-log');
+  const d = document.createElement('div');
+  d.className = 'log-entry' + (isErr ? ' error' : '');
+  const color = method === 'GET' ? '#0d6efd' : method === 'POST' ? '#198754' : method === 'PUT' ? '#ffc107' : '#dc3545';
+  d.innerHTML = `<span style="color:${color};font-weight:600">${method}</span> ${path} <span class="text-muted">${status} · ${ms}ms · ${new Date().toLocaleTimeString()}</span>`;
+  log.prepend(d);
+}
+
+function clearLog() { document.getElementById('request-log').innerHTML = ''; }
+
+async function loadBooks() {
+  const genre = document.getElementById('filter-genre').value;
+  const avail = document.getElementById('filter-avail').value;
+  const search = document.getElementById('search-input').value;
+  let url = '/books?';
+  if (genre) url += `genre=${encodeURIComponent(genre)}&`;
+  if (avail !== '') url += `available=${avail}&`;
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+  allBooks = await apiFetch(url);
+  renderBooks(allBooks);
+  updateStats();
+}
+
+async function loadGenres() {
+  const data = await apiFetch('/genres');
+  const sel = document.getElementById('filter-genre');
+  data.genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+}
+
+function renderBooks(books) {
+  const tbody = document.getElementById('books-body');
+  tbody.innerHTML = books.length ? '' : '<tr><td colspan="6" class="text-center text-muted py-4">No books found</td></tr>';
+  books.forEach(b => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${esc(b.title)}</strong><br><small class="text-muted">${b.id.slice(0,8)}…</small></td>
+      <td>${esc(b.author)}</td>
+      <td><span class="tag">${esc(b.genre)}</span></td>
+      <td>${b.year}</td>
+      <td><span class="status-badge ${b.available ? 'available' : 'borrowed'}">${b.available ? '✓ Available' : '✗ Borrowed'}</span></td>
+      <td>
+        <div class="d-flex action-row">
+          <button class="btn btn-xs btn-outline-primary" style="font-size:.75rem;padding:.2rem .5rem" onclick="openEdit('${b.id}')">Edit</button>
+          <button class="btn btn-xs btn-outline-${b.available ? 'warning' : 'success'}" style="font-size:.75rem;padding:.2rem .5rem" onclick="toggleBorrow('${b.id}','${b.available}')">${b.available ? 'Borrow' : 'Return'}</button>
+          <button class="btn btn-xs btn-outline-danger" style="font-size:.75rem;padding:.2rem .5rem" onclick="deleteBook('${b.id}')">Del</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = allBooks.length;
+  document.getElementById('stat-available').textContent = allBooks.filter(b=>b.available).length;
+  document.getElementById('stat-borrowed').textContent = allBooks.filter(b=>!b.available).length;
+}
+
+async function loadStats() {
+  const h = await apiFetch('/health');
+  const genres = await apiFetch('/genres');
+  document.getElementById('stat-genres').textContent = genres.genres.length;
+  const badge = document.getElementById('health-badge');
+  badge.textContent = h.status === 'ok' ? '● Online' : '● Offline';
+  badge.className = 'badge ' + (h.status === 'ok' ? 'bg-success' : 'bg-danger') + ' ms-2 align-self-center';
+}
+
+document.getElementById('add-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  await apiFetch('/books', {
+    method: 'POST',
+    body: JSON.stringify({
+      title: document.getElementById('f-title').value,
+      author: document.getElementById('f-author').value,
+      genre: document.getElementById('f-genre').value,
+      year: parseInt(document.getElementById('f-year').value),
+      available: document.getElementById('f-avail').checked,
+      description: document.getElementById('f-desc').value || null,
+    })
+  });
+  e.target.reset();
+  document.getElementById('f-year').value = '2024';
+  document.getElementById('f-avail').checked = true;
+  await loadBooks();
+});
+
+function openEdit(id) {
+  const b = allBooks.find(x => x.id === id);
+  if (!b) return;
+  document.getElementById('e-id').value = b.id;
+  document.getElementById('e-title').value = b.title;
+  document.getElementById('e-author').value = b.author;
+  document.getElementById('e-genre').value = b.genre;
+  document.getElementById('e-year').value = b.year;
+  document.getElementById('e-desc').value = b.description || '';
+  document.getElementById('e-avail').checked = b.available;
+  editModal.show();
+}
+
+async function saveEdit() {
+  const id = document.getElementById('e-id').value;
+  await apiFetch(`/books/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      title: document.getElementById('e-title').value,
+      author: document.getElementById('e-author').value,
+      genre: document.getElementById('e-genre').value,
+      year: parseInt(document.getElementById('e-year').value),
+      available: document.getElementById('e-avail').checked,
+      description: document.getElementById('e-desc').value || null,
+    })
+  });
+  editModal.hide();
+  await loadBooks();
+}
+
+async function deleteBook(id) {
+  if (!confirm('Delete this book?')) return;
+  await apiFetch(`/books/${id}`, { method: 'DELETE' });
+  await loadBooks();
+}
+
+async function toggleBorrow(id, available) {
+  const action = available === 'true' ? 'borrow' : 'return';
+  await apiFetch(`/books/${id}/${action}`, { method: 'POST' });
+  await loadBooks();
+}
+
+['filter-genre', 'filter-avail'].forEach(id => document.getElementById(id).addEventListener('change', loadBooks));
+document.getElementById('search-input').addEventListener('input', debounce(loadBooks, 400));
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+window.addEventListener('DOMContentLoaded', async () => {
+  editModal = new bootstrap.Modal(document.getElementById('editModal'));
+  await Promise.all([loadStats(), loadGenres(), loadBooks()]);
+  setInterval(loadStats, 30000);
+});
+</script>
+</body>
+</html>

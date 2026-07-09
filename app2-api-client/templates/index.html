@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Library API Client</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    body { background: #f0f4f8; font-family: system-ui, sans-serif; }
+    .sidebar { width: 260px; min-height: 100vh; background: #1e293b; color: #cbd5e1; }
+    .sidebar h6 { color: #94a3b8; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; padding: .75rem 1.25rem .25rem; }
+    .sidebar a { display: flex; align-items: center; gap: .5rem; padding: .55rem 1.25rem; color: #cbd5e1; text-decoration: none; border-radius: 0; font-size: .88rem; transition: background .15s; }
+    .sidebar a:hover, .sidebar a.active { background: #334155; color: #f1f5f9; }
+    .sidebar a .icon { font-size: 1rem; width: 1.2rem; }
+    .main-content { flex: 1; overflow: hidden; }
+    .topbar { background: #fff; border-bottom: 1px solid #e2e8f0; padding: .75rem 1.5rem; }
+    .stat-card { border: none; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .stat-value { font-size: 2rem; font-weight: 700; }
+    .available { background: #dcfce7; color: #14532d; padding: .25em .65em; border-radius: 50px; font-size: .75rem; }
+    .borrowed { background: #fee2e2; color: #7f1d1d; padding: .25em .65em; border-radius: 50px; font-size: .75rem; }
+    .method-badge { font-size: .7rem; padding: .15em .55em; border-radius: 4px; font-weight: 700; font-family: monospace; }
+    .method-GET { background: #dbeafe; color: #1e40af; }
+    .method-POST { background: #dcfce7; color: #166534; }
+    .method-PUT { background: #fef3c7; color: #92400e; }
+    .method-DELETE { background: #fee2e2; color: #991b1b; }
+    .timeline { max-height: 340px; overflow-y: auto; }
+    .timeline-item { border-left: 2px solid #e2e8f0; padding-left: 1rem; padding-bottom: .75rem; position: relative; }
+    .timeline-item::before { content: ''; position: absolute; left: -5px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; }
+    .timeline-item.success::before { background: #22c55e; }
+    .timeline-item.error::before { background: #ef4444; }
+    .timeline-meta { font-size: .75rem; color: #94a3b8; }
+    .book-card { border: none; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); transition: transform .15s, box-shadow .15s; }
+    .book-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .book-card .genre-tag { font-size: .72rem; background: #f1f5f9; color: #475569; padding: .15em .6em; border-radius: 20px; }
+    .connection-info { font-size: .8rem; }
+    #view-table { display: block; }
+    #view-cards { display: none; }
+    .toggle-view .btn.active { background: #1e293b; color: #fff; }
+  </style>
+</head>
+<body>
+<div class="d-flex" style="min-height:100vh">
+  <!-- Sidebar -->
+  <div class="sidebar d-flex flex-column">
+    <div class="p-4 pb-2">
+      <div class="fw-bold fs-6 text-white">🔗 API Client</div>
+      <div class="text-secondary" style="font-size:.75rem">App 2 — Dashboard</div>
+    </div>
+    <nav class="mt-2">
+      <h6>Navigation</h6>
+      <a href="#" class="active" onclick="showSection('books')"><span class="icon">📚</span> Books Catalogue</a>
+      <a href="#" onclick="showSection('stats')"><span class="icon">📊</span> Statistics</a>
+      <a href="#" onclick="showSection('add')"><span class="icon">➕</span> Add Book</a>
+      <a href="#" onclick="showSection('connection')"><span class="icon">🔌</span> Connection Info</a>
+    </nav>
+    <div class="mt-auto p-4 pt-2">
+      <h6>API Server</h6>
+      <div id="api-server-status" class="d-flex align-items-center gap-2 mt-1">
+        <span class="badge bg-secondary">⏳</span>
+        <small id="api-url" class="text-secondary">connecting…</small>
+      </div>
+      <div class="mt-3 text-secondary" style="font-size:.72rem">
+        <div>Client Port: <strong class="text-white">8002</strong></div>
+        <div class="mt-1">Proxying all requests to upstream API</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main-content d-flex flex-column">
+    <div class="topbar d-flex justify-content-between align-items-center">
+      <div>
+        <h5 class="mb-0 fw-semibold" id="section-title">📚 Books Catalogue</h5>
+        <small class="text-muted" id="section-sub">Browsing books via API Client → API Server</small>
+      </div>
+      <div class="d-flex gap-2">
+        <input class="form-control form-control-sm" id="search-input" placeholder="Search title / author…" style="width:200px">
+        <select class="form-select form-select-sm" id="filter-genre" style="width:150px">
+          <option value="">All Genres</option>
+        </select>
+        <select class="form-select form-select-sm" id="filter-avail" style="width:130px">
+          <option value="">All</option>
+          <option value="true">Available</option>
+          <option value="false">Borrowed</option>
+        </select>
+        <div class="btn-group toggle-view">
+          <button class="btn btn-sm btn-outline-secondary active" id="btn-table" onclick="toggleView('table')">☰ Table</button>
+          <button class="btn btn-sm btn-outline-secondary" id="btn-cards" onclick="toggleView('cards')">⊞ Cards</button>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="loadBooks()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div class="flex-fill overflow-auto p-4">
+
+      <!-- Books Section -->
+      <div id="section-books">
+        <!-- Stats Row -->
+        <div class="row g-3 mb-4" id="stats-row">
+          <div class="col-3"><div class="card stat-card"><div class="card-body text-center py-3"><div class="stat-value text-primary" id="st-total">—</div><small class="text-muted">Total Books</small></div></div></div>
+          <div class="col-3"><div class="card stat-card"><div class="card-body text-center py-3"><div class="stat-value text-success" id="st-avail">—</div><small class="text-muted">Available</small></div></div></div>
+          <div class="col-3"><div class="card stat-card"><div class="card-body text-center py-3"><div class="stat-value text-danger" id="st-borrowed">—</div><small class="text-muted">Borrowed</small></div></div></div>
+          <div class="col-3"><div class="card stat-card"><div class="card-body text-center py-3"><div class="stat-value text-warning" id="st-genres">—</div><small class="text-muted">Genres</small></div></div></div>
+        </div>
+
+        <!-- Table View -->
+        <div id="view-table">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-dark"><tr><th>Title</th><th>Author</th><th>Genre</th><th>Year</th><th>Status</th><th>Actions</th></tr></thead>
+                  <tbody id="books-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card View -->
+        <div id="view-cards">
+          <div class="row g-3" id="books-cards"></div>
+        </div>
+      </div>
+
+      <!-- Stats Section -->
+      <div id="section-stats" class="d-none">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">📡 Request Timeline</div>
+              <div class="card-body"><div class="timeline" id="timeline"></div></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">📈 Genre Distribution</div>
+              <div class="card-body"><canvas id="genre-chart" height="200"></canvas></div>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">📋 API Request Log</div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Method</th><th>Endpoint</th><th>Status</th><th>Duration</th><th>Time</th></tr></thead>
+                    <tbody id="req-log-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Book Section -->
+      <div id="section-add" class="d-none">
+        <div class="row justify-content-center">
+          <div class="col-md-7">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">➕ Add New Book</div>
+              <div class="card-body">
+                <form id="add-form">
+                  <div class="row g-3">
+                    <div class="col-12"><label class="form-label small fw-semibold">Title *</label><input class="form-control" id="f-title" required></div>
+                    <div class="col-md-8"><label class="form-label small fw-semibold">Author *</label><input class="form-control" id="f-author" required></div>
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Year *</label><input class="form-control" id="f-year" type="number" value="2024" required></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">Genre *</label><input class="form-control" id="f-genre" required></div>
+                    <div class="col-md-6"><label class="form-label small fw-semibold">Status</label><select class="form-select" id="f-avail"><option value="true">Available</option><option value="false">Borrowed</option></select></div>
+                    <div class="col-12"><label class="form-label small fw-semibold">Description</label><textarea class="form-control" id="f-desc" rows="3"></textarea></div>
+                    <div class="col-12"><button type="submit" class="btn btn-primary w-100">➕ Add Book via API</button></div>
+                  </div>
+                </form>
+                <div id="add-result" class="mt-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection Section -->
+      <div id="section-connection" class="d-none">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">🔌 Connection Details</div>
+              <div class="card-body">
+                <table class="table table-sm">
+                  <tr><td class="text-muted">Client URL</td><td><code>http://localhost:8002</code></td></tr>
+                  <tr><td class="text-muted">API Server URL</td><td><code id="conn-api-url">—</code></td></tr>
+                  <tr><td class="text-muted">API Server Status</td><td id="conn-status">—</td></tr>
+                  <tr><td class="text-muted">Total Books</td><td id="conn-books">—</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+              <div class="card-header bg-white fw-semibold py-3">🗺️ Architecture Flow</div>
+              <div class="card-body">
+                <div style="background:#f8fafc;border-radius:8px;padding:1.5rem;text-align:center;font-family:monospace;font-size:.85rem">
+                  <div style="background:#dbeafe;padding:.5rem 1rem;border-radius:8px;display:inline-block">👤 User Browser</div>
+                  <div>⬇ HTTP</div>
+                  <div style="background:#dcfce7;padding:.5rem 1rem;border-radius:8px;display:inline-block">🔗 App 2: API Client<br><small>:8002</small></div>
+                  <div>⬇ HTTP Proxy</div>
+                  <div style="background:#fef3c7;padding:.5rem 1rem;border-radius:8px;display:inline-block">📚 App 1: API Server<br><small>:8001</small></div>
+                  <div>⬇ In-Memory</div>
+                  <div style="background:#f3e8ff;padding:.5rem 1rem;border-radius:8px;display:inline-block">🗃️ Book Store</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title fw-semibold">✏️ Edit Book</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="e-id">
+      <div class="mb-2"><input class="form-control form-control-sm" id="e-title" placeholder="Title"></div>
+      <div class="mb-2"><input class="form-control form-control-sm" id="e-author" placeholder="Author"></div>
+      <div class="mb-2 row g-2">
+        <div class="col-8"><input class="form-control form-control-sm" id="e-genre" placeholder="Genre"></div>
+        <div class="col-4"><input class="form-control form-control-sm" id="e-year" type="number" placeholder="Year"></div>
+      </div>
+      <div class="mb-2"><textarea class="form-control form-control-sm" id="e-desc" rows="2" placeholder="Description"></textarea></div>
+      <div class="form-check"><input class="form-check-input" type="checkbox" id="e-avail"><label class="form-check-label small" for="e-avail">Available</label></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEdit()">Save</button>
+    </div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+let allBooks = [], reqLog = [], editModal, genreChart;
+const sections = ['books','stats','add','connection'];
+
+function showSection(name) {
+  sections.forEach(s => {
+    document.getElementById(`section-${s}`)?.classList.toggle('d-none', s !== name);
+  });
+  document.querySelectorAll('.sidebar a').forEach((a,i) => a.classList.toggle('active', i === sections.indexOf(name)));
+  const titles = {books:'📚 Books Catalogue',stats:'📊 Statistics & Timeline',add:'➕ Add New Book',connection:'🔌 Connection Info'};
+  const subs = {books:'Browsing books via API Client → API Server',stats:'API call history and genre distribution',add:'Create a new book through the API',connection:'Client and server connection details'};
+  document.getElementById('section-title').textContent = titles[name] || name;
+  document.getElementById('section-sub').textContent = subs[name] || '';
+  if (name === 'stats') renderGenreChart();
+  if (name === 'connection') loadConnectionInfo();
+}
+
+async function apiFetch(method, path, body) {
+  const start = Date.now();
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  const ms = Date.now() - start;
+  const data = await res.json().catch(() => ({}));
+  logRequest(method, path, res.status, ms, !res.ok);
+  if (!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+function logRequest(method, path, status, ms, isErr) {
+  reqLog.unshift({ method, path, status, ms, time: new Date().toLocaleTimeString(), error: isErr });
+  if (reqLog.length > 50) reqLog.pop();
+  renderTimeline();
+  renderReqLog();
+}
+
+function renderTimeline() {
+  const el = document.getElementById('timeline');
+  if (!el) return;
+  el.innerHTML = reqLog.slice(0,15).map(r => `
+    <div class="timeline-item ${r.error ? 'error' : 'success'}">
+      <div class="d-flex align-items-center gap-2">
+        <span class="method-badge method-${r.method}">${r.method}</span>
+        <code style="font-size:.78rem">${r.path}</code>
+        <span class="badge ${r.error ? 'bg-danger' : 'bg-success'} ms-auto">${r.status}</span>
+      </div>
+      <div class="timeline-meta">${r.time} · ${r.ms}ms</div>
+    </div>`).join('');
+}
+
+function renderReqLog() {
+  const el = document.getElementById('req-log-body');
+  if (!el) return;
+  el.innerHTML = reqLog.map(r => `
+    <tr class="${r.error ? 'table-danger' : ''}">
+      <td><span class="method-badge method-${r.method}">${r.method}</span></td>
+      <td><code style="font-size:.78rem">${r.path}</code></td>
+      <td><span class="badge ${r.error?'bg-danger':'bg-success'}">${r.status}</span></td>
+      <td>${r.ms}ms</td>
+      <td class="text-muted">${r.time}</td>
+    </tr>`).join('');
+}
+
+function renderGenreChart() {
+  const counts = {};
+  allBooks.forEach(b => counts[b.genre] = (counts[b.genre]||0)+1);
+  const labels = Object.keys(counts);
+  const data = labels.map(l => counts[l]);
+  const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
+  const ctx = document.getElementById('genre-chart');
+  if (!ctx) return;
+  if (genreChart) genreChart.destroy();
+  genreChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length) }] },
+    options: { plugins: { legend: { position: 'right' } }, responsive: true }
+  });
+}
+
+async function loadBooks() {
+  const genre = document.getElementById('filter-genre').value;
+  const avail = document.getElementById('filter-avail').value;
+  const search = document.getElementById('search-input').value;
+  let url = '/api/books?';
+  if (genre) url += `genre=${encodeURIComponent(genre)}&`;
+  if (avail !== '') url += `available=${avail}&`;
+  if (search) url += `search=${encodeURIComponent(search)}&`;
+  allBooks = await apiFetch('GET', url);
+  renderBooksTable(allBooks);
+  renderBooksCards(allBooks);
+  updateStats();
+}
+
+function renderBooksTable(books) {
+  const tbody = document.getElementById('books-body');
+  tbody.innerHTML = books.length ? '' : '<tr><td colspan="6" class="text-center text-muted py-4">No books found</td></tr>';
+  books.forEach(b => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${esc(b.title)}</strong></td>
+      <td>${esc(b.author)}</td>
+      <td><small class="book-card genre-tag">${esc(b.genre)}</small></td>
+      <td>${b.year}</td>
+      <td><span class="${b.available ? 'available' : 'borrowed'}">${b.available ? '✓ Available' : '✗ Borrowed'}</span></td>
+      <td>
+        <div class="d-flex gap-1">
+          <button class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:.2rem .45rem" onclick="openEdit('${b.id}')">Edit</button>
+          <button class="btn btn-xs btn-outline-${b.available?'warning':'success'}" style="font-size:.72rem;padding:.2rem .45rem" onclick="toggleBorrow('${b.id}',${b.available})">${b.available?'Borrow':'Return'}</button>
+          <button class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:.2rem .45rem" onclick="deleteBook('${b.id}')">Del</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderBooksCards(books) {
+  const el = document.getElementById('books-cards');
+  el.innerHTML = books.map(b => `
+    <div class="col-md-4 col-lg-3">
+      <div class="card book-card h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span class="genre-tag">${esc(b.genre)}</span>
+            <span class="${b.available?'available':'borrowed'}" style="font-size:.72rem">${b.available?'✓':'✗'}</span>
+          </div>
+          <h6 class="fw-semibold mb-1">${esc(b.title)}</h6>
+          <div class="text-muted small mb-2">${esc(b.author)} · ${b.year}</div>
+          <p class="text-muted" style="font-size:.78rem">${esc(b.description||'')}</p>
+        </div>
+        <div class="card-footer bg-transparent d-flex gap-1">
+          <button class="btn btn-sm btn-outline-primary flex-fill" onclick="openEdit('${b.id}')">Edit</button>
+          <button class="btn btn-sm btn-outline-${b.available?'warning':'success'} flex-fill" onclick="toggleBorrow('${b.id}',${b.available})">${b.available?'Borrow':'Return'}</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteBook('${b.id}')">🗑</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function updateStats() {
+  document.getElementById('st-total').textContent = allBooks.length;
+  document.getElementById('st-avail').textContent = allBooks.filter(b=>b.available).length;
+  document.getElementById('st-borrowed').textContent = allBooks.filter(b=>!b.available).length;
+}
+
+async function loadGenres() {
+  const data = await apiFetch('GET', '/api/genres');
+  const sel = document.getElementById('filter-genre');
+  data.genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    sel.appendChild(opt);
+  });
+  document.getElementById('st-genres').textContent = data.genres.length;
+}
+
+async function loadHealth() {
+  try {
+    const d = await apiFetch('GET', '/api/health');
+    const ok = d.api_server?.status === 'ok';
+    document.getElementById('api-server-status').innerHTML = `
+      <span class="badge ${ok ? 'bg-success' : 'bg-danger'}">${ok ? '● Online' : '● Offline'}</span>
+      <small class="text-secondary" style="font-size:.7rem">${d.api_server_url}</small>`;
+    document.getElementById('api-url').textContent = '';
+  } catch(e) {}
+}
+
+async function loadConnectionInfo() {
+  const d = await apiFetch('GET', '/api/health').catch(() => ({}));
+  document.getElementById('conn-api-url').textContent = d.api_server_url || '—';
+  const ok = d.api_server?.status === 'ok';
+  document.getElementById('conn-status').innerHTML = `<span class="badge ${ok?'bg-success':'bg-danger'}">${ok?'Online':'Offline'}</span>`;
+  document.getElementById('conn-books').textContent = d.api_server?.book_count ?? '—';
+}
+
+function openEdit(id) {
+  const b = allBooks.find(x => x.id === id); if (!b) return;
+  ['id','title','author','genre','year','desc'].forEach(f => {
+    const el = document.getElementById(`e-${f}`);
+    if (el) el.value = b[f === 'desc' ? 'description' : f] || '';
+  });
+  document.getElementById('e-avail').checked = b.available;
+  editModal.show();
+}
+
+async function saveEdit() {
+  const id = document.getElementById('e-id').value;
+  await apiFetch('PUT', `/api/books/${id}`, {
+    title: document.getElementById('e-title').value,
+    author: document.getElementById('e-author').value,
+    genre: document.getElementById('e-genre').value,
+    year: parseInt(document.getElementById('e-year').value),
+    available: document.getElementById('e-avail').checked,
+    description: document.getElementById('e-desc').value || null,
+  });
+  editModal.hide();
+  await loadBooks();
+}
+
+async function deleteBook(id) {
+  if (!confirm('Delete this book?')) return;
+  await apiFetch('DELETE', `/api/books/${id}`);
+  await loadBooks();
+}
+
+async function toggleBorrow(id, available) {
+  const action = available ? 'borrow' : 'return';
+  await apiFetch('POST', `/api/books/${id}/${action}`);
+  await loadBooks();
+}
+
+document.getElementById('add-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const res = document.getElementById('add-result');
+  try {
+    const book = await apiFetch('POST', '/api/books', {
+      title: document.getElementById('f-title').value,
+      author: document.getElementById('f-author').value,
+      genre: document.getElementById('f-genre').value,
+      year: parseInt(document.getElementById('f-year').value),
+      available: document.getElementById('f-avail').value === 'true',
+      description: document.getElementById('f-desc').value || null,
+    });
+    res.innerHTML = `<div class="alert alert-success">✓ Book "<strong>${esc(book.title)}</strong>" added with ID: <code>${book.id.slice(0,8)}…</code></div>`;
+    e.target.reset();
+    document.getElementById('f-year').value = '2024';
+    await loadBooks();
+  } catch(err) {
+    res.innerHTML = `<div class="alert alert-danger">✗ Error: ${err.message}</div>`;
+  }
+});
+
+function toggleView(type) {
+  document.getElementById('view-table').style.display = type === 'table' ? 'block' : 'none';
+  document.getElementById('view-cards').style.display = type === 'cards' ? 'block' : 'none';
+  document.getElementById('btn-table').classList.toggle('active', type === 'table');
+  document.getElementById('btn-cards').classList.toggle('active', type === 'cards');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+['filter-genre','filter-avail'].forEach(id => document.getElementById(id).addEventListener('change', loadBooks));
+document.getElementById('search-input').addEventListener('input', debounce(loadBooks, 400));
+
+window.addEventListener('DOMContentLoaded', async () => {
+  editModal = new bootstrap.Modal(document.getElementById('editModal'));
+  await Promise.all([loadHealth(), loadGenres(), loadBooks()]);
+  setInterval(loadHealth, 30000);
+});
+</script>
+</body>
+</html>
