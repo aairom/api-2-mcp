@@ -567,7 +567,7 @@ const TOOLS = [
   { name: 'list_books', desc: 'List all books with optional genre/availability/search filters', params: ['genre?','available?','search?'] },
   { name: 'get_book', desc: 'Get details of a specific book by ID', params: ['book_id'] },
   { name: 'create_book', desc: 'Add a new book to the library', params: ['title','author','genre','year','available','description?'] },
-  { name: 'update_book', desc: 'Update an existing book's details', params: ['book_id','title?','author?','genre?','year?','available?'] },
+  { name: 'update_book', desc: 'Update an existing book&#39;s details', params: ['book_id','title?','author?','genre?','year?','available?'] },
   { name: 'delete_book', desc: 'Remove a book from the library', params: ['book_id'] },
   { name: 'borrow_book', desc: 'Mark a book as borrowed (unavailable)', params: ['book_id'] },
   { name: 'return_book', desc: 'Mark a borrowed book as returned (available)', params: ['book_id'] },

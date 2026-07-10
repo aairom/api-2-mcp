@@ -82,6 +82,28 @@ sequenceDiagram
 
 ---
 
+## Agent Resilience: LLM → Fallback Chain
+
+```mermaid
+flowchart TD
+    Q[User Query] --> OL{Ollama\navailable?}
+    OL -- Yes --> LLM[ReAct loop with Ollama LLM]
+    OL -- No  --> MOCK[Rule-based Mock Agent]
+
+    LLM --> PARSE{LLM output\nparseable as\nReAct step?}
+    PARSE -- Yes → action --> TOOL[Call MCP Tool]
+    PARSE -- Yes → final  --> ANS[Final Answer to User]
+    PARSE -- No           --> MOCK
+
+    MOCK --> TOOL
+    TOOL --> RES[Tool Result via MCP]
+    RES --> ANS
+```
+
+When Ollama is running but returns output that cannot be parsed as a valid ReAct action (Thought / Action / Final Answer), App 4 transparently falls back to the rule-based mock agent to execute the most relevant MCP tool call and still returns a meaningful answer to the user.
+
+---
+
 ## API-to-MCP Transformation
 
 ```mermaid

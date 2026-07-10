@@ -260,20 +260,58 @@ Rules:
 """ + TOOLS_SCHEMA_TEXT
 
 
+# Known valid MCP tool names
+_VALID_TOOLS = {"list_books", "get_book", "create_book", "update_book", "delete_book",
+                "borrow_book", "return_book", "list_genres"}
+
+
+def _remap_tool(hallucinated: str, query: str) -> str:
+    """Map a hallucinated tool name to the closest real MCP tool."""
+    h = hallucinated.lower()
+    q = query.lower()
+    if any(w in h for w in ("search", "list", "find", "browse", "retrieve", "get_all")):
+        return "list_books"
+    if any(w in h for w in ("genre", "categor", "type")):
+        return "list_genres"
+    if any(w in h for w in ("creat", "add", "insert", "new")):
+        return "create_book"
+    if any(w in h for w in ("updat", "edit", "modif")):
+        return "update_book"
+    if any(w in h for w in ("delet", "remov")):
+        return "delete_book"
+    if any(w in h for w in ("borrow", "check_out", "checkout")):
+        return "borrow_book"
+    if any(w in h for w in ("return", "give_back")):
+        return "return_book"
+    # Fall back using query intent
+    if any(w in q for w in ("genre", "categor")):
+        return "list_genres"
+    return "list_books"
+
+
+
+
 def parse_react_step(text: str) -> dict:
-    """Parse a ReAct step from LLM output."""
-    thought_match = re.search(r"Thought:\s*(.+?)(?=Action:|Final Answer:|$)", text, re.DOTALL | re.IGNORECASE)
-    action_match = re.search(r"Action:\s*(\w+)", text, re.IGNORECASE)
-    input_match = re.search(r"Action Input:\s*(\{.+?\})", text, re.DOTALL | re.IGNORECASE)
+    """Parse the FIRST action step from LLM output.
+
+    The model often outputs a full ReAct chain (Thought→Action→…→Final Answer)
+    in a single completion.  We must extract the first Action *before* the first
+    Final Answer so that tool calls are actually executed rather than skipped.
+    """
+    # Split at the first Final Answer boundary so Action matches before it are preferred
+    pre_final, _, _ = text.partition("Final Answer:")
+
+    thought_match = re.search(r"Thought:\s*(.+?)(?=Action:|Final Answer:|$)", pre_final or text, re.DOTALL | re.IGNORECASE)
+    action_match = re.search(r"Action:\s*(\w+)", pre_final, re.IGNORECASE)
+    input_match = re.search(r"Action Input:\s*(\{.+?\})", pre_final, re.DOTALL | re.IGNORECASE)
     final_match = re.search(r"Final Answer:\s*(.+)", text, re.DOTALL | re.IGNORECASE)
 
-    result = {}
+    result: dict = {}
     if thought_match:
         result["thought"] = thought_match.group(1).strip()
-    if final_match:
-        result["type"] = "final"
-        result["answer"] = final_match.group(1).strip()
-    elif action_match:
+
+    if action_match:
+        # Prefer Action over Final Answer when both appear — execute the tool first
         result["type"] = "action"
         result["tool"] = action_match.group(1).strip()
         if input_match:
@@ -283,6 +321,9 @@ def parse_react_step(text: str) -> dict:
                 result["args"] = {}
         else:
             result["args"] = {}
+    elif final_match:
+        result["type"] = "final"
+        result["answer"] = final_match.group(1).strip()
     return result
 
 
@@ -398,6 +439,11 @@ async def run_agent(query: str, session_id: str, ws: WebSocket, use_ollama: bool
                     tool_name = parsed["tool"]
                     args = parsed.get("args", {})
 
+                    # If the LLM hallucinated a tool name, remap to the best real tool
+                    if tool_name not in _VALID_TOOLS:
+                        tool_name = _remap_tool(tool_name, query)
+                        args = {}  # remapped tool gets fresh args from mock logic
+
                     await send_step("tool_call", {
                         "tool": tool_name,
                         "args": args,
@@ -409,9 +455,23 @@ async def run_agent(query: str, session_id: str, ws: WebSocket, use_ollama: bool
 
                     prompt += f"\nThought: {parsed.get('thought','')}\nAction: {tool_name}\nAction Input: {json.dumps(args)}\nObservation: {result}\n"
                 else:
-                    # Fallback
-                    await send_step("final_answer", {"content": llm_out.strip()})
-                    history.append({"role": "assistant", "content": llm_out.strip()})
+                    # LLM did not produce a valid ReAct action — fall back to mock agent
+                    await send_step("thinking", {"message": "🤖 LLM output not parseable, falling back to rule-based agent..."})
+                    fallback_steps = mock_agent_decide(query, tools, history)
+                    all_results = []
+                    for fstep in fallback_steps:
+                        await send_step("thought", {"content": fstep["thought"]})
+                        await send_step("tool_call", {
+                            "tool": fstep["tool"],
+                            "args": fstep["args"],
+                            "mcp_url": f"{MCP_SERVER_URL}/mcp",
+                        })
+                        fresult = await call_mcp_tool(fstep["tool"], fstep["args"])
+                        await send_step("tool_result", {"tool": fstep["tool"], "result": fresult})
+                        all_results.append(fresult)
+                    final = "\n\n".join(all_results) or llm_out.strip()
+                    await send_step("final_answer", {"content": final})
+                    history.append({"role": "assistant", "content": final})
                     break
             except Exception as e:
                 await send_step("error", {"message": f"LLM error: {str(e)}"})

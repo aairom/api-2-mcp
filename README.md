@@ -91,6 +91,15 @@ When using App 4, try these natural language queries:
 - *"Add a new book: AI Revolution by Sam Altman, genre Technology, year 2024"*
 - *"Show me borrowed books"*
 
+App 4 operates in two modes depending on availability:
+
+| Mode | When active | Behaviour |
+|------|------------|-----------|
+| **Ollama LLM (ReAct)** | Ollama is running with the configured model | Full reasoning loop — Thought → Action → Observation → Final Answer |
+| **Rule-based Mock** | Ollama unavailable *or* LLM output unparseable | Keyword-driven tool dispatch; always returns a real MCP result |
+
+> **Tool Call Log** — The right-hand panel in App 4's chat UI keeps a persistent history of every MCP tool call, even after the chat is cleared.
+
 ---
 
 ## Project Structure

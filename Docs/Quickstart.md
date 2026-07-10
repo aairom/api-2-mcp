@@ -75,9 +75,11 @@ If Ollama or the model is unavailable, App 4 automatically falls back to a rule-
 3. **Open App 3** — See the 8 MCP tools derived from App 1's API; watch tool calls arrive in real-time
 4. **Open App 4** — Type a query like *"Show all Fantasy books"* and watch the agent:
    - Discover tools from the MCP server
-   - Reason about which tool to call
-   - Execute the MCP call
-   - Stream the result back
+   - Reason about which tool to call (Ollama LLM or rule-based fallback)
+   - Execute the MCP call and stream each step back in real time
+   - If the LLM output cannot be parsed as a valid ReAct action, App 4 automatically falls back to the rule-based mock agent and still returns a meaningful result
+
+> **Tool Call Log (right panel)** — The panel on the right of App 4's chat interface records every MCP tool call made during the session. It is intentionally preserved when you clear the chat, so you always retain a full history of tool executions.
 
 ## 8. Stop All Applications
 

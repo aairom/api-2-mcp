@@ -392,7 +392,7 @@ function handleKey(e) {
 
 function clearChat() {
   if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'clear' }));
-  clearChatMessages();
+  // server will reply with 'cleared'; don't call clearChatMessages() twice
 }
 
 function clearChatMessages() {
@@ -403,8 +403,7 @@ function clearChatMessages() {
       <h4 class="mt-3">Library AI Agent</h4>
       <p class="mt-2">I use MCP tools to interact with the Library API. Ask me anything!</p>
     </div>`;
-  toolCallLog = [];
-  renderToolLog();
+  // toolCallLog intentionally kept — it is a persistent call log, not chat history
   currentStepsContainer = null;
 }
 
